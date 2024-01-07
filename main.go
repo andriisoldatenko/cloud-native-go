@@ -64,9 +64,30 @@ func keyValuePutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logger.WritePut(key, string(value))
+
 	w.WriteHeader(http.StatusCreated)
+	log.Printf("PUT key=%s value=%s\n", key, string(value))
 
 }
+
+func keyValueDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	key := vars["key"]
+
+	err := Delete(key)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	logger.WriteDelete(key)
+	
+	w.WriteHeader(http.StatusOK)
+
+	log.Printf("DELETE key=%s\n", key)
+}
+
 
 func keyValueGetHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -83,7 +104,21 @@ func keyValueGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write([]byte(value))
+	log.Printf("GET key=%s\n", key)
+
 }
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.Method, r.RequestURI)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func notAllowedHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Not Allowed", http.StatusMethodNotAllowed)
+}
+
 
 func initializeTransactionLog() error {
 	var err error
@@ -113,9 +148,19 @@ func initializeTransactionLog() error {
 }
 
 func main() {
+	err := initializeTransactionLog()
+	if err != nil {
+		log.Fatal(err)
+	}
 	r := mux.NewRouter()
+	r.Use(loggingMiddleware)
 
 	r.HandleFunc("/v1/{key}", keyValuePutHandler).Methods("PUT")
 	r.HandleFunc("/v1/{key}", keyValueGetHandler).Methods("GET")
+	r.HandleFunc("/v1/{key}", keyValueDeleteHandler).Methods("DELETE")
+
+	r.HandleFunc("/v1", notAllowedHandler)
+	r.HandleFunc("/v1/{key}", notAllowedHandler)
+
 	log.Fatal(http.ListenAndServe(":8080", r))
 }

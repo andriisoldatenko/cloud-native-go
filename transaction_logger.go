@@ -48,7 +48,7 @@ func NewFileTransactionLogger(filename string) (TransactionLogger, error) {
 }
 
 func (l *FileTransactionLogger) WritePut(key, value string) {
-	l.events <- Event{EventType: EventPut, Key: key}
+	l.events <- Event{EventType: EventPut, Key: key, Value: value}
 }
 
 func (l *FileTransactionLogger) WriteDelete(key string) {
@@ -91,11 +91,7 @@ func (l *FileTransactionLogger) ReadEvents() (<-chan Event, <-chan error) {
 
 		for scanner.Scan() {
 			line := scanner.Text()
-			_, err := fmt.Sscanf(line, "%d\t%d\t%s\t%s\n", &e.Seq, &e.EventType, &e.Key, &e.Value)
-			if err != nil {
-				outError <- fmt.Errorf("input parse error: %w", err)
-			}
-
+			fmt.Sscanf(line, "%d\t%d\t%s\t%s", &e.Seq, &e.EventType, &e.Key, &e.Value)
 			// Sanity  check
 			if l.lastSeq >= e.Seq {
 				outError <- fmt.Errorf("transaction numbers out of sequence")
