@@ -120,13 +120,13 @@ func notAllowedHandler(w http.ResponseWriter, r *http.Request) {
 
 func initializeTransactionLog() error {
 	var err error
-	//logger, err = NewFileTransactionLogger("transaction.log")
-	logger, err = NewPostgresTransactionLogger(PostgresDBParams{
-		host:     "localhost",
-		dbName:   "kvs",
-		user:     "test",
-		password: "pass",
-	})
+	logger, err = NewFileTransactionLogger("/tmp/transaction.log")
+	//logger, err = NewPostgresTransactionLogger(PostgresDBParams{
+	//	host:     "localhost",
+	//	dbName:   "kvs",
+	//	user:     "test",
+	//	password: "pass",
+	//})
 	if err != nil {
 		return fmt.Errorf("failed to creat event logger: %w", err)
 	}
